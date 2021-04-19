@@ -9,14 +9,13 @@ import './Board.css';
 
 class Board extends Component {
   static defaultProps = {
-    nrows: 5, //nrows: number of rows of board
-    ncols: 5 //ncols: number of cols of board
+    nrows: 3, //nrows: number of rows of board
+    ncols: 3 //ncols: number of cols of board
   }
   constructor(props) {
     super(props);
-    this.state = { hasWon: false, board: this.createBoard() }
-    //hasWon: boolean, true when board is all off
-    //board: array-of-arrays of true/false
+    this.state = { hasWon: false, board: this.createBoard() } //hasWon: boolean, true when board is all off
+    this.flipCellsAroundMe = this.flipCellsAroundMe.bind(this); //board: array-of-arrays of true/false
   }
 
   /** create a board nrows high/ncols wide, each cell randomly lit or unlit */
@@ -43,9 +42,9 @@ class Board extends Component {
 
   generateBoard() {
     return this.state.board.map((row, idx) => (
-      <tr>
+      <tr key={idx}>
         {row.map((cell, id) => (
-          <td><Cell key={`${idx}-${id}`} isLit={cell} flipCellsAroundMe={this.flipCellsAround}/></td>
+          <Cell key={`${idx}-${id}`} value={`${idx}-${id}`} isLit={cell} flipCellsAroundMe={this.flipCellsAroundMe} />
         ))}
       </tr>
     ))
@@ -53,27 +52,69 @@ class Board extends Component {
 
   /** handle changing a cell: update board & determine if winner */
 
-  flipCellsAround(coord) {
+  flipCellsAroundMe(coord) {
+    console.log(coord);
     let { ncols, nrows } = this.props;
     let board = this.state.board;
-    let hasWon = this.state.hasWon;
+
     let [y, x] = coord.split("-").map(Number);
 
+    console.log([y, x]);
 
     function flipCell(y, x) {
-      // if this coord is actually on board, flip it
-
-      if (x >= 0 && x < ncols && y >= 0 && y < nrows) {
-        board[y][x] = !board[y][x];
+      // if this coord is actually on board, flip it & tiles adjacent to it.
+      if (x >= 0 && x < ncols - 1 && y > 0 && y < nrows - 1) {
+        board[y][x] = !board[y][x]; //center
+        board[y - 1][x] = !board[y - 1][x]; //top
+        board[y + 1][x] = !board[y + 1][x]; //bottom
+        board[y][x - 1] = !board[y][x - 1]; //left
+        board[y][x + 1] = !board[y][x + 1]; //right
+      } else if (y === 0 && x < ncols - 1) { //edge case top - first row
+        board[y][x] = !board[y][x]; //center
+        board[y + 1][x] = !board[y + 1][x]; //bottom
+        board[y][x - 1] = !board[y][x - 1]; //left
+        board[y][x + 1] = !board[y][x + 1]; //right
+      } else if (x === ncols - 1 && (y !== 0 && y !== nrows - 1)) { //edge case right side
+        board[y][x] = !board[y][x]; //center
+        board[y - 1][x] = !board[y - 1][x]; //top
+        board[y + 1][x] = !board[y + 1][x]; //bottom
+        board[y][x - 1] = !board[y][x - 1]; //left
+      } else if (y === nrows - 1 && (x !== 0 && x !== ncols - 1)) { //edge case bottom row 
+        board[y][x] = !board[y][x]; //center
+        board[y - 1][x] = !board[y - 1][x]; //top
+        board[y][x - 1] = !board[y][x - 1]; //left
+        board[y][x + 1] = !board[y][x + 1]; //right
+      } else if ( y === nrows - 1 && x === 0){
+        board[y][x] = !board[y][x]; //center
+        board[y - 1][x] = !board[y - 1][x]; //top
+        board[y][x + 1] = !board[y][x + 1]; //right
+      } else if ( y === nrows - 1 && x === ncols - 1){
+        board[y][x] = !board[y][x]; //center
+        board[y - 1][x] = !board[y - 1][x]; //top
+        board[y][x - 1] = !board[y][x - 1]; //left
+      } else if ( y === 0 && x === ncols - 1){
+        board[y][x] = !board[y][x]; //center
+        board[y + 1][x] = !board[y + 1][x]; //bottom
+        board[y][x - 1] = !board[y][x - 1]; //left
       }
     }
 
-    // TODO: flip this cell and the cells around it
+    flipCell(y, x);
 
-    // win when every cell is turned off
-    // TODO: determine is the game has been won
+    let count = 0;
+    board.forEach(e => e.forEach(f => f===true? count++ : count--));
+    
+    let hasWon;
+    if(count === 9){
+      hasWon = true;
+    } else {
+      hasWon = false;
+    }
 
-    this.setState({ board, hasWon });
+    this.setState(st => ({ 
+      hasWon: hasWon, 
+      board: board 
+    }));
   }
 
   /** Render game board or winning message. */
@@ -81,9 +122,7 @@ class Board extends Component {
     return (
       <table>
         <tbody>
-          <tr>
             {this.state.hasWon ? "You Win!" : this.generateBoard()}
-          </tr>
         </tbody>
       </table>
     )
